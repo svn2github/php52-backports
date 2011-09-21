@@ -228,6 +228,7 @@ static void php_libxml_node_free_list(xmlNodePtr node TSRMLS_DC)
 			switch (node->type) {
 				/* Skip property freeing for the following types */
 				case XML_NOTATION_NODE:
+				case XML_ENTITY_DECL:
 					break;
 				case XML_ENTITY_REF_NODE:
 					php_libxml_node_free_list((xmlNodePtr) node->properties TSRMLS_CC);
@@ -239,7 +240,6 @@ static void php_libxml_node_free_list(xmlNodePtr node TSRMLS_DC)
 				case XML_ATTRIBUTE_DECL:
 				case XML_DTD_NODE:
 				case XML_DOCUMENT_TYPE_NODE:
-				case XML_ENTITY_DECL:
 				case XML_NAMESPACE_DECL:
 				case XML_TEXT_NODE:
 					php_libxml_node_free_list(node->children TSRMLS_CC);
@@ -316,9 +316,7 @@ static void *php_libxml_streams_IO_open_wrapper(const char *filename, const char
 		}
 	}
 
-	if (LIBXML(stream_context)) {
-		context = zend_fetch_resource(&LIBXML(stream_context) TSRMLS_CC, -1, "Stream-Context", NULL, 1, php_le_stream_context());
-	}
+	context = php_stream_context_from_zval(LIBXML(stream_context), 0);
 
 	ret_val = php_stream_open_wrapper_ex(path_to_open, (char *)mode, ENFORCE_SAFE_MODE|REPORT_ERRORS, NULL, context);
 	if (isescaped) {

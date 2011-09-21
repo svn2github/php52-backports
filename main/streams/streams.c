@@ -131,6 +131,7 @@ void php_stream_display_wrapper_errors(php_stream_wrapper *wrapper, const char *
 	char *tmp = estrdup(path);
 	char *msg;
 	int free_msg = 0;
+	php_stream_wrapper orig_wrapper;
 
 	if (wrapper) {
 		if (wrapper->err_count > 0) {
@@ -175,7 +176,16 @@ void php_stream_display_wrapper_errors(php_stream_wrapper *wrapper, const char *
 	}
 
 	php_strip_url_passwd(tmp);
+	if (wrapper) {
+		/* see bug #52935 */
+		orig_wrapper = *wrapper;
+		wrapper->err_stack = NULL;
+		wrapper->err_count = 0;
+	}
 	php_error_docref1(NULL TSRMLS_CC, tmp, E_WARNING, "%s: %s", caption, msg);
+	if (wrapper) {
+		*wrapper = orig_wrapper;
+	}
 	efree(tmp);
 	if (free_msg) {
 		efree(msg);
@@ -1138,7 +1148,7 @@ PHPAPI int _php_stream_seek(php_stream *stream, off_t offset, int whence TSRMLS_
 	}
 
 	/* emulate forward moving seeks with reads */
-	if (whence == SEEK_CUR && offset > 0) {
+	if (whence == SEEK_CUR && offset >= 0) {
 		char tmp[1024];
 		while(offset >= sizeof(tmp)) {
 			if (php_stream_read(stream, tmp, sizeof(tmp)) == 0) {
@@ -1247,6 +1257,9 @@ PHPAPI size_t _php_stream_copy_to_mem(php_stream *src, char **buf, size_t maxlen
 		ptr = *buf = pemalloc_rel_orig(maxlen + 1, persistent);
 		while ((len < maxlen) && !php_stream_eof(src)) {
 			ret = php_stream_read(src, ptr, maxlen - len);
+			if (!ret) {
+				break;
+			}
 			len += ret;
 			ptr += ret;
 		}

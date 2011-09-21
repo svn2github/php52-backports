@@ -526,7 +526,6 @@ php_stream *php_stream_url_wrap_http_ex(php_stream_wrapper *wrapper, char *path,
 		}
 		php_stream_write(stream, "\r\n", sizeof("\r\n")-1);
 		php_stream_write(stream, Z_STRVAL_PP(tmpzval), Z_STRLEN_PP(tmpzval));
-		php_stream_write(stream, "\r\n\r\n", sizeof("\r\n\r\n")-1);
 	} else {
 		php_stream_write(stream, "\r\n", sizeof("\r\n")-1);
 	}

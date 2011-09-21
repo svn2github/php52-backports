@@ -795,6 +795,8 @@ PHP_FUNCTION(mysqli_fetch_field)
 	add_property_string(return_value, "orgname",(field->org_name ? field->org_name : ""), 1);
 	add_property_string(return_value, "table",(field->table ? field->table : ""), 1);
 	add_property_string(return_value, "orgtable",(field->org_table ? field->org_table : ""), 1);
+	add_property_string(return_value, "db",(field->db ? field->db : ""), 1);
+	add_property_string(return_value, "catalog",(field->catalog ? field->catalog : ""), 1);
 	add_property_string(return_value, "def",(field->def ? field->def : ""), 1);
 	add_property_long(return_value, "max_length", field->max_length);
 	add_property_long(return_value, "length", field->length);
@@ -878,6 +880,8 @@ PHP_FUNCTION(mysqli_fetch_field_direct)
 	add_property_string(return_value, "orgname",(field->org_name ? field->org_name : ""), 1);
 	add_property_string(return_value, "table",(field->table ? field->table : ""), 1);
 	add_property_string(return_value, "orgtable",(field->org_table ? field->org_table : ""), 1);
+	add_property_string(return_value, "db",(field->db ? field->db : ""), 1);
+	add_property_string(return_value, "catalog",(field->catalog ? field->catalog : ""), 1);
 	add_property_string(return_value, "def",(field->def ? field->def : ""), 1);
 	add_property_long(return_value, "max_length", field->max_length);
 	add_property_long(return_value, "length", field->length);
