@@ -880,7 +880,7 @@ PHPAPI char *php_stream_get_record(php_stream *stream, size_t maxlen, size_t *re
 		just_read = (stream->writepos - stream->readpos) - len;
 		len += just_read;
 
-		if (just_read < toread) {
+		if (just_read == 0) {
 			break;
 		}
 	}

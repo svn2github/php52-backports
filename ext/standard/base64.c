@@ -154,7 +154,15 @@ PHPAPI unsigned char *php_base64_decode_ex(const unsigned char *str, int length,
 	/* run through the whole string, converting as we go */
 	while ((ch = *current++) != '\0' && length-- > 0) {
 		if (ch == base64_pad) {
-			if (*current != '=' && (i % 4) == 1) {
+			if (*current != '=' && ((i % 4) == 1 || (strict && length > 0))) {
+				if ((i % 4) != 1) {
+					while (isspace(*(++current))) {
+						continue;
+					}
+					if (*current == '\0') {
+						continue;
+					}
+				}
 				efree(result);
 				return NULL;
 			}

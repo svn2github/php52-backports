@@ -843,7 +843,7 @@ PHP_FUNCTION(tempnam)
 		p[63] = '\0';
 	}
 
-	if ((fd = php_open_temporary_fd(d, p, &opened_path TSRMLS_CC)) >= 0) {
+	if ((fd = php_open_temporary_fd_ex(d, p, &opened_path,1 TSRMLS_CC)) >= 0) {
 		close(fd);
 		RETVAL_STRING(opened_path, 0);
 	} else {
@@ -2157,7 +2157,7 @@ PHPAPI void php_fgetcsv(php_stream *stream, char delimiter, char enclosure, size
 		inc_len = (bptr < limit ? (*bptr == '\0' ? 1: php_mblen(bptr, limit - bptr)): 0);
 		if (inc_len == 1) {
 			char *tmp = bptr;
-			while (isspace((int)*(unsigned char *)tmp)) {
+			while ((*tmp != delimiter) && isspace((int)*(unsigned char *)tmp)) {
 				tmp++;
 			}
 			if (*tmp == enclosure) {
