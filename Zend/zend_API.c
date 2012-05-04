@@ -278,12 +278,14 @@ ZEND_API int zend_get_object_classname(zval *object, char **class_name, zend_uin
 static int parse_arg_object_to_string(zval **arg, char **p, int *pl, int type TSRMLS_DC)
 {
 	if (Z_OBJ_HANDLER_PP(arg, cast_object)) {
-		SEPARATE_ZVAL_IF_NOT_REF(arg);
+		zval *obj;
+		MAKE_STD_ZVAL(obj);
 		if (Z_OBJ_HANDLER_PP(arg, cast_object)(*arg, *arg, type TSRMLS_CC) == SUCCESS) {
-			*pl = Z_STRLEN_PP(arg);
-			*p = Z_STRVAL_PP(arg);
+			zval_ptr_dtor(arg);
+			*arg = obj;
 			return SUCCESS;
 		}
+		efree(obj);
 	}
 	/* Standard PHP objects */
 	if (Z_OBJ_HT_PP(arg) == &std_object_handlers || !Z_OBJ_HANDLER_PP(arg, cast_object)) {
