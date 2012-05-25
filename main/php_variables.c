@@ -136,12 +136,11 @@ PHPAPI void php_register_variable_ex(char *var_name, zval *val, zval *track_vars
 
 				if (track_vars_array) {
 					ht = Z_ARRVAL_P(track_vars_array);
-					zend_symtable_del(ht, var, var_len + 1);
 				} else if (PG(register_globals)) {
 					ht = EG(active_symbol_table);
-					zend_symtable_del(ht, var, var_len + 1);
 				}
 
+				zend_hash_del(ht, var, var_len + 1);
 				zval_dtor(val);
 
 				/* do not output the error message to the screen,
@@ -442,7 +441,7 @@ void _php_import_environment_variables(zval *array_ptr TSRMLS_DC)
 	int magic_quotes_gpc = PG(magic_quotes_gpc);
 
 	if (PG(magic_quotes_gpc)) {
-		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1);
+		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);	
 	}
 
 	for (env = environ; env != NULL && *env != NULL; env++) {
@@ -586,8 +585,8 @@ static inline void php_register_server_variables(TSRMLS_D)
 		zval_ptr_dtor(&PG(http_globals)[TRACK_VARS_SERVER]);
 	}
 	PG(http_globals)[TRACK_VARS_SERVER] = array_ptr;
-	if (PG(magic_quotes_gpc)) {
-		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1);
+	if (magic_quotes_gpc) {
+		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);	
 	}
 
 	/* Server variables */
@@ -613,7 +612,9 @@ static inline void php_register_server_variables(TSRMLS_D)
 		php_register_variable_ex("REQUEST_TIME", &new_entry, array_ptr TSRMLS_CC);
 	}
 
-	PG(magic_quotes_gpc) = magic_quotes_gpc;
+	if (magic_quotes_gpc) {
+		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "1", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);
+	}
 }
 /* }}} */
 
