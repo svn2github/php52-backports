@@ -611,20 +611,20 @@ void cgi_php_import_environment_variables(zval *array_ptr TSRMLS_DC)
 		int filter_arg = (array_ptr == PG(http_globals)[TRACK_VARS_ENV])?PARSE_ENV:PARSE_SERVER;
 
 		/* turn off magic_quotes while importing environment variables */
-		if (magic_quotes_gpc) {
-			zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);
+		if (PG(magic_quotes_gpc)) {
+			zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1);
 		}
 		for (zend_hash_internal_pointer_reset_ex(&request->env, &pos);
-		     zend_hash_get_current_key_ex(&request->env, &var, &var_len, &idx, 0, &pos) == HASH_KEY_IS_STRING &&
-		     zend_hash_get_current_data_ex(&request->env, (void **) &val, &pos) == SUCCESS;
-		     zend_hash_move_forward_ex(&request->env, &pos)) {
+			zend_hash_get_current_key_ex(&request->env, &var, &var_len, &idx, 0, &pos) == HASH_KEY_IS_STRING &&
+			zend_hash_get_current_data_ex(&request->env, (void **) &val, &pos) == SUCCESS;
+			zend_hash_move_forward_ex(&request->env, &pos)
+		) {
 			unsigned int new_val_len;
 			if (sapi_module.input_filter(filter_arg, var, val, strlen(*val), &new_val_len TSRMLS_CC)) {
 				php_register_variable_safe(var, *val, new_val_len, array_ptr TSRMLS_CC);
 			}
 		}
-		if (magic_quotes_gpc) {
-			zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);
+		PG(magic_quotes_gpc) = magic_quotes_gpc;
 	}
 }
 #endif
