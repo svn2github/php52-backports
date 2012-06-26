@@ -29,7 +29,6 @@
 #include "SAPI.h"
 #include "php_logos.h"
 #include "zend_globals.h"
-#include "php_ini.h"
 
 /* for systems that need to override reading of environment variables */
 void _php_import_environment_variables(zval *array_ptr TSRMLS_DC);
@@ -58,18 +57,17 @@ PHPAPI void php_register_variable_safe(char *var, char *strval, int str_len, zva
 	php_register_variable_ex(var, &new_entry, track_vars_array TSRMLS_CC);
 }
 
-PHPAPI void php_register_variable_ex(char *var_name, zval *val, zval *track_vars_array TSRMLS_DC)
+PHPAPI void php_register_variable_ex(char *var, zval *val, zval *track_vars_array TSRMLS_DC)
 {
 	char *p = NULL;
 	char *ip;		/* index pointer */
 	char *index, *escaped_index = NULL;
-	char *var, *var_orig;
 	int var_len, index_len;
 	zval *gpc_element, **gpc_element_p;
 	zend_bool is_array = 0;
 	HashTable *symtable1 = NULL;
 
-	assert(var_name != NULL);
+	assert(var != NULL);
 	
 	if (track_vars_array) {
 		symtable1 = Z_ARRVAL_P(track_vars_array);
@@ -86,8 +84,6 @@ PHPAPI void php_register_variable_ex(char *var_name, zval *val, zval *track_vars
 	 * Prepare variable name
 	 */
 
-	var_orig = estrdup(var_name);
-	var = var_orig;
 	/* ignore leading spaces in the variable name */
 	while (*var && *var==' ') {
 		var++;
@@ -108,7 +104,6 @@ PHPAPI void php_register_variable_ex(char *var_name, zval *val, zval *track_vars
 
 	if (var_len==0) { /* empty variable name, or variable name with a space in it */
 		zval_dtor(val);
-		efree(var_orig);
 		return;
 	}
 
@@ -117,7 +112,6 @@ PHPAPI void php_register_variable_ex(char *var_name, zval *val, zval *track_vars
 		var_len == sizeof("GLOBALS")-1 &&
 		!memcmp(var, "GLOBALS", sizeof("GLOBALS")-1)) {
 		zval_dtor(val);
-		efree(var_orig);
 		return;
 	}
 
@@ -148,7 +142,6 @@ PHPAPI void php_register_variable_ex(char *var_name, zval *val, zval *track_vars
 				if (!PG(display_errors)) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Input variable nesting level exceeded %ld. To increase the limit change max_input_nesting_level in php.ini.", PG(max_input_nesting_level));
 				}
-				efree(var_orig);
 				return;
 			}
 
@@ -188,17 +181,9 @@ PHPAPI void php_register_variable_ex(char *var_name, zval *val, zval *track_vars
 				}
 				if (zend_symtable_find(symtable1, escaped_index, index_len + 1, (void **) &gpc_element_p) == FAILURE
 					|| Z_TYPE_PP(gpc_element_p) != IS_ARRAY) {
-					if (zend_hash_num_elements(symtable1) <= PG(max_input_vars)) {
-					    if (zend_hash_num_elements(symtable1) == PG(max_input_vars)) {
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Input variables exceeded %ld. To increase the limit change max_input_vars in php.ini.", PG(max_input_vars));
-					    }
 					MAKE_STD_ZVAL(gpc_element);
 					array_init(gpc_element);
 					zend_symtable_update(symtable1, escaped_index, index_len + 1, &gpc_element, sizeof(zval *), (void **) &gpc_element_p);
-					} else {
-				    efree(var_orig);
-				    return;
-					}
 				}
 				if (index != escaped_index) {
 					efree(escaped_index);
@@ -241,9 +226,6 @@ plain_var:
 				zend_symtable_exists(symtable1, escaped_index, index_len + 1)) {
 				zval_ptr_dtor(&gpc_element);
 			} else {
-				if (zend_hash_num_elements(symtable1) >= PG(max_input_vars)) {
-					php_error_docref(NULL TSRMLS_CC, E_ERROR, "Input variables exceeded %ld. To increase the limit change max_input_vars in php.ini.", PG(max_input_vars));
-				}
 				zend_symtable_update(symtable1, escaped_index, index_len + 1, &gpc_element, sizeof(zval *), (void **) &gpc_element_p);
 			}
 			if (escaped_index != index) {
@@ -251,7 +233,6 @@ plain_var:
 			}
 		}
 	}
-	efree(var_orig);
 }
 
 SAPI_API SAPI_POST_HANDLER_FUNC(php_std_post_handler)
@@ -439,10 +420,7 @@ void _php_import_environment_variables(zval *array_ptr TSRMLS_DC)
 
 	/* turn off magic_quotes while importing environment variables */
 	int magic_quotes_gpc = PG(magic_quotes_gpc);
-
-	if (PG(magic_quotes_gpc)) {
-		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);	
-	}
+	PG(magic_quotes_gpc) = 0;
 
 	for (env = environ; env != NULL && *env != NULL; env++) {
 		p = strchr(*env, '=');
@@ -585,9 +563,7 @@ static inline void php_register_server_variables(TSRMLS_D)
 		zval_ptr_dtor(&PG(http_globals)[TRACK_VARS_SERVER]);
 	}
 	PG(http_globals)[TRACK_VARS_SERVER] = array_ptr;
-	if (magic_quotes_gpc) {
-		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);	
-	}
+	PG(magic_quotes_gpc) = 0;
 
 	/* Server variables */
 	if (sapi_module.register_server_variables) {
@@ -612,9 +588,7 @@ static inline void php_register_server_variables(TSRMLS_D)
 		php_register_variable_ex("REQUEST_TIME", &new_entry, array_ptr TSRMLS_CC);
 	}
 
-	if (magic_quotes_gpc) {
-		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "1", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);
-	}
+	PG(magic_quotes_gpc) = magic_quotes_gpc;
 }
 /* }}} */
 
