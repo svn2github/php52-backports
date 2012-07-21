@@ -29,6 +29,7 @@
 #include "SAPI.h"
 #include "php_logos.h"
 #include "zend_globals.h"
+#include "php_ini.h"
 
 /* for systems that need to override reading of environment variables */
 void _php_import_environment_variables(zval *array_ptr TSRMLS_DC);
@@ -191,15 +192,20 @@ PHPAPI void php_register_variable_ex(char *var_name, zval *val, zval *track_vars
 				}
 				if (zend_symtable_find(symtable1, escaped_index, index_len + 1, (void **) &gpc_element_p) == FAILURE
 					|| Z_TYPE_PP(gpc_element_p) != IS_ARRAY) {
-					MAKE_STD_ZVAL(gpc_element);
-					array_init(gpc_element);
-					zend_symtable_update(symtable1, escaped_index, index_len + 1, &gpc_element, sizeof(zval *), (void **) &gpc_element_p);
-				} else {
-					if (index != escaped_index) {
-						efree(escaped_index);
+					if (zend_hash_num_elements(symtable1) <= PG(max_input_vars)) {
+						if (zend_hash_num_elements(symtable1) == PG(max_input_vars)) {
+							php_error_docref(NULL TSRMLS_CC, E_WARNING, "Input variables exceeded %ld. To increase the limit change max_input_vars in php.ini.", PG(max_input_vars));
+						}
+						MAKE_STD_ZVAL(gpc_element);
+						array_init(gpc_element);
+						zend_symtable_update(symtable1, escaped_index, index_len + 1, &gpc_element, sizeof(zval *), (void **) &gpc_element_p);
+					} else {
+						if (index != escaped_index) {
+							efree(escaped_index);
+						}
+						zval_dtor(val);
+						return;
 					}
-					zval_dtor(val);
-					return;
 				}
 				if (index != escaped_index) {
 					efree(escaped_index);
@@ -244,7 +250,14 @@ plain_var:
 				zend_symtable_exists(symtable1, escaped_index, index_len + 1)) {
 				zval_ptr_dtor(&gpc_element);
 			} else {
-				zend_symtable_update(symtable1, escaped_index, index_len + 1, &gpc_element, sizeof(zval *), (void **) &gpc_element_p);
+				if (zend_hash_num_elements(symtable1) <= PG(max_input_vars)) {
+					if (zend_hash_num_elements(symtable1) == PG(max_input_vars)) {
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Input variables exceeded %ld. To increase the limit change max_input_vars in php.ini.", PG(max_input_vars));
+					}
+					zend_symtable_update(symtable1, escaped_index, index_len + 1, &gpc_element, sizeof(zval *), (void **) &gpc_element_p);
+				} else {
+					zval_ptr_dtor(&gpc_element);
+				}
 			}
 			if (escaped_index != index) {
 				efree(escaped_index);
@@ -439,7 +452,10 @@ void _php_import_environment_variables(zval *array_ptr TSRMLS_DC)
 
 	/* turn off magic_quotes while importing environment variables */
 	int magic_quotes_gpc = PG(magic_quotes_gpc);
-	PG(magic_quotes_gpc) = 0;
+
+	if (magic_quotes_gpc) {
+		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);
+	}
 
 	for (env = environ; env != NULL && *env != NULL; env++) {
 		p = strchr(*env, '=');
@@ -458,7 +474,10 @@ void _php_import_environment_variables(zval *array_ptr TSRMLS_DC)
 	if (t != buf && t != NULL) {
 		efree(t);
 	}
-	PG(magic_quotes_gpc) = magic_quotes_gpc;
+
+	if (magic_quotes_gpc) {
+		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "1", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);
+	}
 }
 
 zend_bool php_std_auto_global_callback(char *name, uint name_len TSRMLS_DC)
@@ -582,7 +601,9 @@ static inline void php_register_server_variables(TSRMLS_D)
 		zval_ptr_dtor(&PG(http_globals)[TRACK_VARS_SERVER]);
 	}
 	PG(http_globals)[TRACK_VARS_SERVER] = array_ptr;
-	PG(magic_quotes_gpc) = 0;
+	if (magic_quotes_gpc) {
+		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "0", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);
+	}
 
 	/* Server variables */
 	if (sapi_module.register_server_variables) {
@@ -607,7 +628,9 @@ static inline void php_register_server_variables(TSRMLS_D)
 		php_register_variable_ex("REQUEST_TIME", &new_entry, array_ptr TSRMLS_CC);
 	}
 
-	PG(magic_quotes_gpc) = magic_quotes_gpc;
+	if (magic_quotes_gpc) {
+		zend_alter_ini_entry_ex("magic_quotes_gpc", sizeof("magic_quotes_gpc"), "1", 1, ZEND_INI_SYSTEM, ZEND_INI_STAGE_ACTIVATE, 1 TSRMLS_CC);
+	}
 }
 /* }}} */
 
