@@ -1040,7 +1040,7 @@ static dom_object* dom_objects_set_class(zend_class_entry *class_type, zend_bool
 
 	zend_object_std_init(&intern->std, class_type TSRMLS_CC);
 	if (hash_copy) {
-		zend_hash_copy(intern->std.properties, &class_type->default_properties, (copy_ctor_func_t) zval_add_ref, (void *) &tmp, sizeof(zval *));
+		zend_hash_copy(intern->std.properties, &class_type->default_properties, (copy_ctor_func_t) zval_property_ctor, (void *) &tmp, sizeof(zval *));
 	}
 
 	return intern;
