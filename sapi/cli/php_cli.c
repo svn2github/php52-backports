@@ -628,7 +628,7 @@ int main(int argc, char *argv[])
 	int orig_optind=php_optind;
 	char *orig_optarg=php_optarg;
 	char *arg_free=NULL, **arg_excp=&arg_free;
-	char *script_file=NULL;
+	char *script_file=NULL, *translated_path = NULL;
 	int interactive=0;
 	volatile int module_started = 0;
 	volatile int request_started = 0;
@@ -1034,6 +1034,12 @@ int main(int argc, char *argv[])
 		if (script_file) {
 			if (cli_seek_file_begin(&file_handle, script_file, &lineno TSRMLS_CC) != SUCCESS) {
 				goto err;
+			} else {
+				char real_path[MAXPATHLEN];
+				if (VCWD_REALPATH(script_file, real_path)) {
+					translated_path = strdup(real_path);
+				}
+				script_filename = script_file;
 			}
 			script_filename = script_file;
 		} else {
@@ -1054,7 +1060,7 @@ int main(int argc, char *argv[])
 		SG(request_info).argc=argc-php_optind+1;
 		arg_excp = argv+php_optind-1;
 		arg_free = argv[php_optind-1];
-		SG(request_info).path_translated = file_handle.filename;
+		SG(request_info).path_translated = translated_path? translated_path : file_handle.filename;
 		argv[php_optind-1] = file_handle.filename;
 		SG(request_info).argv=argv+php_optind-1;
 
