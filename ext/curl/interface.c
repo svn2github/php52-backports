@@ -1229,9 +1229,9 @@ PHP_FUNCTION(curl_copy_handle)
 	dupch->cp = cp;
 	dupch->uses = 0;
 	if (ch->handlers->write->stream) {
-		zval_add_ref(dupch->handlers->write->stream);
-		dupch->handlers->write->stream = ch->handlers->write->stream;
+		zval_add_ref(ch->handlers->write->stream);
 	}
+	dupch->handlers->write->stream = ch->handlers->write->stream;
 	dupch->handlers->write->method = ch->handlers->write->method;
 	dupch->handlers->write->type   = ch->handlers->write->type;
 	if (ch->handlers->read->stream) {
