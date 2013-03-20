@@ -267,6 +267,19 @@ static PHP_GINIT_FUNCTION(libxml)
 	libxml_globals->stream_context = NULL;
 	libxml_globals->error_buffer.c = NULL;
 	libxml_globals->error_list = NULL;
+	libxml_globals->entity_loader.fci.size = 0;
+	libxml_globals->entity_loader_disabled = 0;
+}
+
+static void _php_libxml_destroy_fci(zend_fcall_info *fci)
+{
+	if (fci->size > 0) {
+		zval_ptr_dtor(&fci->function_name);
+		if (fci->object_pp != NULL) {
+			zval_ptr_dtor(&fci->object_pp);
+		}
+		fci->size = 0;
+	}
 }
 
 /* Channel libxml file io layer through the PHP streams subsystem.
