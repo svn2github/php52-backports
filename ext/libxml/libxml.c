@@ -276,7 +276,7 @@ static void _php_libxml_destroy_fci(zend_fcall_info *fci)
 	if (fci->size > 0) {
 		zval_ptr_dtor(&fci->function_name);
 		if (fci->object_pp != NULL) {
-			zval_ptr_dtor(&fci->object_pp);
+			zval_ptr_dtor(fci->object_pp);
 		}
 		fci->size = 0;
 	}
