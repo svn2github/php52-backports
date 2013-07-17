@@ -2744,7 +2744,8 @@ static int exif_process_unicode(image_info_type *ImageInfo, xp_field_type *xp_fi
 static int exif_process_IFD_in_MAKERNOTE(image_info_type *ImageInfo, char * value_ptr, int value_len, char *offset_base, size_t IFDlength, size_t displacement TSRMLS_DC)
 {
 	int de, i=0, section_index = SECTION_MAKERNOTE;
-	int NumDirEntries, old_motorola_intel, offset_diff;
+	int NumDirEntries, old_motorola_intel;
+	size_t offset_diff;
 	const maker_note_type *maker_note;
 	char *dir_start;
 
@@ -2920,6 +2921,9 @@ static int exif_process_IFD_TAG(image_info_type *ImageInfo, char *dir_entry, cha
 			}
 		}
 	} else {
+		if (value_ptr<offset_base) {
+			return FALSE;
+		}
 		/* 4 bytes or less and value is in the dir entry itself */
 		value_ptr = dir_entry+8;
 		offset_val= value_ptr-offset_base;
@@ -3719,6 +3723,9 @@ static int exif_process_IFD_in_TIFF(image_info_type *ImageInfo, size_t dir_offse
 						exif_error_docref(NULL EXIFERR_CC, ImageInfo, E_NOTICE, "Next IFD: %s done", exif_get_sectionname(sub_section_index));
 #endif
 					} else {
+						if(dir_offset > ImageInfo->file.list[sn].data) {
+							return FALSE;
+						}
 						if (!exif_process_IFD_TAG(ImageInfo, (char*)dir_entry,
 												  (char*)(ImageInfo->file.list[sn].data-dir_offset),
 												  ifd_size, 0, section_index, 0, tag_table TSRMLS_CC)) {
